@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from app.api.routes import router
+from app.core.db import Base, engine
+from app.api import models
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
