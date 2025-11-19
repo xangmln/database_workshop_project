@@ -8,7 +8,7 @@ class Photo(Base):
     __tablename__ = "photos"
 
     img_url: Mapped[str] = mapped_column(
-        String,
+        String(255),
         primary_key=True,
         default=lambda: str(uuid4())
     )

@@ -10,7 +10,7 @@ class Post(Base):
     __tablename__ = "posts"
 
     post_id: Mapped[str] = mapped_column(
-        String, 
+        String(36), 
         primary_key=True, 
         default=lambda: str(uuid4())
     )
@@ -20,12 +20,12 @@ class Post(Base):
         index=True
     )
     title: Mapped[str] = mapped_column(
-        String, 
+        String(100), 
         index=True, 
         nullable=False
     )
     content: Mapped[str] = mapped_column(
-        String, 
+        String(100), 
         nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(

@@ -8,12 +8,12 @@ class Tag(Base):
     __tablename__ = "tags"
 
     tag_id: Mapped[str] = mapped_column(
-        String,
+        String(36),
         primary_key=True,
         default=lambda: str(uuid4())
     )
     word: Mapped[str] = mapped_column(
-        String,
+        String(100),
         unique=True,
         index=True,
         nullable=False

@@ -7,11 +7,11 @@ from app.core.db import Base
 class User(Base):
     __tablename__ = "users"
 
-    user_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
-    name: Mapped[str] = mapped_column(String, index=True, nullable=False)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-    bio: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    name: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(100), nullable=False)
+    bio: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     posts: Mapped[List["Post"]] = relationship(
         "Post", 
