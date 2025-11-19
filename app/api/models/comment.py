@@ -2,8 +2,8 @@ from uuid import uuid4
 from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.db import Base
-from api.utils.utils import get_kst_now
+from app.core.db import Base
+from app.api.utils.utils import get_kst_now
 
 
 class Comment(Base):

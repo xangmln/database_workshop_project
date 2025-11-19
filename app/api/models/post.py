@@ -3,8 +3,8 @@ from typing import List
 from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.db import Base
-from api.utils.utils import get_kst_now
+from app.core.db import Base
+from app.api.utils.utils import get_kst_now
 
 class Post(Base):
     __tablename__ = "posts"
@@ -46,7 +46,7 @@ class Post(Base):
         back_populates="post", 
         cascade="all, delete-orphan"
     )
-    post_tags: Mapped[List["Hashtag"]] = relationship(
+    post_hashtags: Mapped[List["Hashtag"]] = relationship(
         "Hashtag",
         back_populates="post",
         cascade="all, delete-orphan"
