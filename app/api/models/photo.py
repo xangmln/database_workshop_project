@@ -2,13 +2,13 @@ from uuid import uuid4
 from typing import List
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.db import Base
+from app.core.db import Base
 
 class Photo(Base):
     __tablename__ = "photos"
 
     img_url: Mapped[str] = mapped_column(
-        String,
+        String(255),
         primary_key=True,
         default=lambda: str(uuid4())
     )
