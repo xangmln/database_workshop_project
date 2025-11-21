@@ -17,11 +17,21 @@ async def create_new_post(
 ) -> PostOut:
     
     user = await get_user_by_id(db, user_id)
+    if len(images) < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미지는 최소 1장 이상 업로드해야 합니다."
+        )
     if len(images) > 3:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미지는 최대 3장까지만 업로드 가능합니다."
         )
+    uploaded_urls = []
+    for img in images:
+        url = upload_img_to_cloudinary
+        uploaded_urls.append(url)
+
     new_post = Post(
         title=title,
         content=content,
@@ -30,12 +40,8 @@ async def create_new_post(
     db.add(new_post)
     db.flush()
 
-    uploaded_urls = []
-
-    for index, img in enumerate(images):
-        url = upload_img_to_cloudinary(img)
-        uploaded_urls.append(url)
-
+    
+    for index, url in enumerate(uploaded_urls):
         new_photo = Photo(
             post_id=new_post.post_id,
             img_url=url,
