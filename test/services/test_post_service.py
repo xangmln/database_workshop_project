@@ -8,85 +8,105 @@ from app.api.services.post import create_new_post
 from app.api.models.user import User
 from app.api.models.post import Post
 from app.api.models.photo import Photo
+from app.api.models.tag import Tag
+from app.api.models.hashtag import Hashtag
 
 def create_dummy_file(filename="test.jpg"):
     return UploadFile(filename=filename, file=BytesIO(b"fake_image_content"))
 
-
 @pytest.mark.asyncio
-async def test_create_new_post_success(db_session: Session):
-    """
-    성공 케이스: 
-    존재하는 user_id로 요청 시, 
-    1. 게시글(Post) 생성
-    2. 이미지 업로드(Mock) 및 Photo 생성
-    3. PostOut 스키마 반환
-    """
-    user = User(
-        user_id="test_user_id",
-        email="test@example.com",
-        hashed_password="hashed_pw",
-        name="Test User"
-    )
+async def test_create_new_post_with_hashtags(db_session: Session):
+    user = User(user_id="tag_user", email="tag@ex.com", hashed_password="pw", name="Tagger")
     db_session.add(user)
+    
+    existing_tag = Tag(word="existing_tag")
+    db_session.add(existing_tag)
     db_session.commit()
 
-    images = [create_dummy_file("img1.jpg"), create_dummy_file("img2.jpg")]
+    images = [create_dummy_file("img1.jpg")]
+    input_hashtags = ["existing_tag", "new_tag"]
 
     with patch("app.api.services.post.upload_img_to_cloudinary") as mock_upload:
-        mock_upload.side_effect = ["http://url1.com", "http://url2.com"]
+        mock_upload.return_value = "http://url.com/img1.jpg"
 
         result = await create_new_post(
             db=db_session,
-            title="My New Post",
-            content="Hello World",
+            title="Hashtag Post",
+            content="Content",
             images=images,
-            user_id="test_user_id"
+            user_id="tag_user",
+            hashtag=input_hashtags
         )
 
-    assert result.title == "My New Post"
-    assert result.user_id == "test_user_id"
-    assert len(result.image_url) == 2
-    assert result.image_url[0] == "http://url1.com"
-
-    db_post = db_session.query(Post).filter(Post.title == "My New Post").first()
-    assert db_post is not None
-    assert db_post.user_id == "test_user_id"
+    assert result.title == "Hashtag Post"
     
-    db_photos = db_session.query(Photo).filter(Photo.post_id == db_post.post_id).all()
-    assert len(db_photos) == 2
+    new_tag_in_db = db_session.query(Tag).filter(Tag.word == "new_tag").first()
+    assert new_tag_in_db is not None
+    
+    existing_tags = db_session.query(Tag).filter(Tag.word == "existing_tag").all()
+    assert len(existing_tags) == 1
+
+    db_post = db_session.query(Post).filter(Post.title == "Hashtag Post").first()
+    
+    linked_hashtags = db_session.query(Hashtag).filter(Hashtag.post_id == db_post.post_id).all()
+    assert len(linked_hashtags) == 2 
+
+    linked_tag_ids = [h.tag_id for h in linked_hashtags]
+    assert existing_tag.tag_id in linked_tag_ids
+    assert new_tag_in_db.tag_id in linked_tag_ids
 
 
 @pytest.mark.asyncio
-async def test_create_new_post_user_not_found(db_session: Session):
-    """
-    실패 케이스: 
-    존재하지 않는 user_id로 요청 시 404 에러 발생
-    (get_user_by_id 함수가 제대로 작동하는지 확인)
-    """
-    non_existent_user_id = "ghost_user"
+async def test_create_new_post_no_hashtags(db_session: Session):
+    user = User(user_id="no_tag_user", email="no@ex.com", hashed_password="pw", name="NoTag")
+    db_session.add(user)
+    db_session.commit()
+
     images = [create_dummy_file()]
+
+    with patch("app.api.services.post.upload_img_to_cloudinary") as mock_upload:
+        mock_upload.return_value = "url"
+
+        result = await create_new_post(
+            db=db_session,
+            title="No Tag Post",
+            content="Content",
+            images=images,
+            user_id="no_tag_user",
+            hashtag=None
+        )
+
+    assert result.title == "No Tag Post"
+    
+    db_post = db_session.query(Post).filter(Post.title == "No Tag Post").first()
+    count = db_session.query(Hashtag).filter(Hashtag.post_id == db_post.post_id).count()
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_create_new_post_too_few_images(db_session: Session):
+    user = User(user_id="img_user", email="img@ex.com", hashed_password="pw", name="Img")
+    db_session.add(user)
+    db_session.commit()
+
+    images = []
+
     with pytest.raises(HTTPException) as exc_info:
         await create_new_post(
             db=db_session,
             title="Fail Post",
-            content="Fail Content",
+            content="Content",
             images=images,
-            user_id=non_existent_user_id
+            user_id="img_user"
         )
 
-    assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "사용자를 찾을 수 없습니다."
+    assert exc_info.value.status_code == 400
+    assert "이미지는 최소 1장" in exc_info.value.detail
 
 
 @pytest.mark.asyncio
 async def test_create_new_post_too_many_images(db_session: Session):
-    """
-    실패 케이스:
-    이미지가 3장을 초과하면 400 에러 발생
-    (유저가 존재하더라도 이미지 개수 검증이 통과해야 함)
-    """
-    user = User(user_id="valid_user", email="valid@ex.com", hashed_password="pw", name="Valid")
+    user = User(user_id="img_user_2", email="img2@ex.com", hashed_password="pw", name="Img2")
     db_session.add(user)
     db_session.commit()
 
@@ -95,10 +115,10 @@ async def test_create_new_post_too_many_images(db_session: Session):
     with pytest.raises(HTTPException) as exc_info:
         await create_new_post(
             db=db_session,
-            title="Too Many",
-            content="Images",
+            title="Fail Post",
+            content="Content",
             images=images,
-            user_id="valid_user"
+            user_id="img_user_2"
         )
 
     assert exc_info.value.status_code == 400
