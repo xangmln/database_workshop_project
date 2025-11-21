@@ -1,9 +1,7 @@
 from typing import List
-from fastapi import APIRouter, Depends, status, File, UploadFile, Form
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, status, File, UploadFile, Form
 
 from app.api.utils.deps import SessionDep
-from app.api.models.user import User
 from app.api.services.post import create_new_post
 from app.api.schemas.posts import PostOut
 
