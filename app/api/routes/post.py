@@ -13,7 +13,7 @@ async def create_post_endpoint(
     title: str = Form(...),
     content: str = Form(...),
     user_id: str = Form(...),
-    images: List[UploadFile] = File(default=[]), 
+    images: List[UploadFile] = File(...), 
 ):
     """
     게시글 생성 API (이미지 최소 1장 최대 3장)\n
