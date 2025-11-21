@@ -29,7 +29,7 @@ async def create_new_post(
         )
     uploaded_urls = []
     for img in images:
-        url = upload_img_to_cloudinary
+        url = upload_img_to_cloudinary(img)
         uploaded_urls.append(url)
 
     new_post = Post(
