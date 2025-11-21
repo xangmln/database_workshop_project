@@ -16,5 +16,8 @@ class Photo(Base):
         ForeignKey("posts.post_id"),
         nullable=False
     )
+    order: Mapped[int] = mapped_column(
+        nullable=False
+    )
     
     post = relationship("Post", back_populates="post_photos")
