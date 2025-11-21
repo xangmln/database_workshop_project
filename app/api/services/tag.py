@@ -2,7 +2,7 @@ from app.api.utils.deps import SessionDep
 from app.api.models.tag import Tag
 from app.api.schemas.tags import TagOut
 
-async def get_tag_by_word(db: SessionDep, word: str) -> TagOut | None:
+async def get_tag_by_word(db: SessionDep, word: str) -> TagOut:
     tag = db.query(Tag).filter(Tag.word == word).first()
     if tag:
         return TagOut.model_validate(tag)

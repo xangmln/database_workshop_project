@@ -16,7 +16,7 @@ async def create_new_post(
     content: str, 
     images: List[UploadFile],
     user_id: str,
-    hashtag: List[str] = None
+    hashtag: List[str] | None = None
 ) -> PostOut:
     user = await get_user_by_id(db, user_id)
 
