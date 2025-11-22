@@ -7,7 +7,7 @@ from app.api.schemas.posts import PostOut, PostView
 
 post = APIRouter(prefix="/post", tags=["post"])
 
-@post.post("", response_model=List[PostView])
+@post.get("", response_model=List[PostView])
 async def get_all_posts(db: SessionDep):
     """
     전체 게시글 조회 API
