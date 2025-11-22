@@ -4,7 +4,8 @@ from typing import List
 from app.api.models.post import Post
 from app.api.models.photo import Photo
 from app.api.models.hashtag import Hashtag
-from app.api.schemas.posts import PostOut
+from app.api.models.like import Like
+from app.api.schemas.posts import PostOut, PostView
 from app.api.services.user import get_user_by_id
 from app.api.services.tag import get_tag_by_word
 from app.core.image import upload_img_to_cloudinary
@@ -76,3 +77,25 @@ async def create_new_post(
         hashtag = tag if tag else None
     )
     return result
+
+async def view_post(
+    db: SessionDep
+) -> List[PostView]:
+    post = db.query(Post).order_by(Post.created_at.desc()).all()
+    result = []
+    for p in post:
+        like_count = db.query(Like).filter(Like.post_id == p.post_id).count()
+        photos = db.query(Photo).filter(Photo.post_id == p.post_id).order_by(Photo.order).all()
+        image_urls = [photo.img_url for photo in photos]
+        post_view = PostView(
+            image_url=image_urls,
+            title=p.title,
+            content=p.content,
+            user_id=p.user_id,
+            name=p.author.name,
+            like_count=like_count
+        )
+        result.append(post_view)
+    return result
+
+    

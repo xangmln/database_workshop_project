@@ -2,10 +2,19 @@ from typing import List
 from fastapi import APIRouter, status, File, UploadFile, Form
 
 from app.api.utils.deps import SessionDep
-from app.api.services.post import create_new_post
-from app.api.schemas.posts import PostOut
+from app.api.services.post import create_new_post, view_post
+from app.api.schemas.posts import PostOut, PostView
 
 post = APIRouter(prefix="/post", tags=["post"])
+
+@post.post("", response_model=List[PostView])
+async def get_all_posts(db: SessionDep):
+    """
+    전체 게시글 조회 API
+    """
+    posts = await view_post(db=db)
+
+    return [PostView.model_validate(post) for post in posts]
 
 @post.post("/create", status_code=status.HTTP_201_CREATED, response_model=PostOut)
 async def create_post_endpoint(

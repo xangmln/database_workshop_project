@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from app.api.schemas.tags import TagOut
 
 class PostOut(BaseModel):
@@ -11,4 +11,7 @@ class PostOut(BaseModel):
     hashtag: Optional[List[TagOut]] = None
 
     model_config = ConfigDict(from_attributes=True)
-    
+
+class PostView(PostOut):
+    name: str
+    like_count: int = Field(default=0)
