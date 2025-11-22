@@ -1,5 +1,8 @@
 from fastapi import UploadFile, HTTPException, status
 from typing import List
+from sqlalchemy.orm import joinedload
+from sqlalchemy import func
+
 
 from app.api.models.post import Post
 from app.api.models.photo import Photo
@@ -81,11 +84,23 @@ async def create_new_post(
 async def view_post(
     db: SessionDep
 ) -> List[PostView]:
-    post = db.query(Post).order_by(Post.created_at.desc()).all()
+    posts = (
+        db.query(
+            Post,
+            func.count(Like.user_id).label('like_count')
+        )
+        .outerjoin(Like, Post.post_id == Like.post_id)
+        .options(
+            joinedload(Post.author),
+            joinedload(Post.post_photos)
+        )
+        .group_by(Post.post_id)
+        .order_by(Post.created_at.desc())
+        .all()
+    )
     result = []
-    for p in post:
-        like_count = db.query(Like).filter(Like.post_id == p.post_id).count()
-        photos = db.query(Photo).filter(Photo.post_id == p.post_id).order_by(Photo.order).all()
+    for p, like_count in posts:
+        photos = sorted(p.post_photos, key=lambda x: x.order)
         image_urls = [photo.img_url for photo in photos]
         post_view = PostView(
             image_url=image_urls,
