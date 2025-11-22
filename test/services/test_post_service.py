@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from io import BytesIO
 from datetime import datetime, timedelta
 
+from app.api.utils.utils import get_kst_now
 from app.api.services.post import create_new_post, view_post
 from app.api.models.user import User
 from app.api.models.post import Post
@@ -148,13 +149,13 @@ async def test_view_post_success(db_session: Session):
         title="Old Post",
         content="Old Content",
         user_id=author.user_id,
-        created_at=datetime.utcnow() - timedelta(days=1)
+        created_at=get_kst_now() - timedelta(days=1)
     )
     new_post = Post(
         title="New Post",
         content="New Content",
         user_id=author.user_id,
-        created_at=datetime.utcnow()
+        created_at=get_kst_now()
     )
     db_session.add_all([old_post, new_post])
     db_session.commit()

@@ -9,6 +9,7 @@ from app.api.models.user import User
 from app.api.models.post import Post
 from app.api.models.photo import Photo
 from app.api.models.like import Like
+from app.api.utils.utils import get_kst_now
 
 test_post_data = {
     "title": "Router Test Title",
@@ -110,13 +111,13 @@ def test_get_all_posts_success(client: TestClient, db_session: Session):
         title="Old Post",
         content="Content 1",
         user_id=user.user_id,
-        created_at=datetime.utcnow() - timedelta(hours=1)
+        created_at=get_kst_now() - timedelta(days=1)
     )
     post2 = Post(
         title="New Post",
         content="Content 2",
         user_id=user.user_id,
-        created_at=datetime.utcnow()
+        created_at=get_kst_now()
     )
     db_session.add_all([post1, post2])
     db_session.commit()
@@ -129,7 +130,7 @@ def test_get_all_posts_success(client: TestClient, db_session: Session):
     db_session.add(like)
     db_session.commit()
 
-    response = client.post("/post")
+    response = client.get("/post")
 
     assert response.status_code == 200
     data = response.json()
@@ -143,7 +144,7 @@ def test_get_all_posts_success(client: TestClient, db_session: Session):
     assert data[1]["image_url"][0] == "http://test.com/img.jpg"
 
 def test_get_all_posts_empty(client: TestClient, db_session: Session):
-    response = client.post("/post")
+    response = client.get("/post")
     
     assert response.status_code == 200
     assert response.json() == []
