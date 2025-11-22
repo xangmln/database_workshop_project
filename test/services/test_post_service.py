@@ -3,13 +3,16 @@ from unittest.mock import patch
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from io import BytesIO
+from datetime import datetime, timedelta
 
-from app.api.services.post import create_new_post
+from app.api.utils.utils import get_kst_now
+from app.api.services.post import create_new_post, view_post
 from app.api.models.user import User
 from app.api.models.post import Post
 from app.api.models.photo import Photo
 from app.api.models.tag import Tag
 from app.api.models.hashtag import Hashtag
+from app.api.models.like import Like
 
 def create_dummy_file(filename="test.jpg"):
     return UploadFile(filename=filename, file=BytesIO(b"fake_image_content"))
@@ -123,3 +126,65 @@ async def test_create_new_post_too_many_images(db_session: Session):
 
     assert exc_info.value.status_code == 400
     assert "이미지는 최대 3장" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_view_post_success(db_session: Session):
+    author = User(
+        user_id="author_id",
+        email="author@test.com",
+        hashed_password="pw",
+        name="Kim Author"
+    )
+    liker = User(
+        user_id="liker_id",
+        email="liker@test.com",
+        hashed_password="pw",
+        name="Lee Liker"
+    )
+    db_session.add_all([author, liker])
+    db_session.commit()
+
+    old_post = Post(
+        title="Old Post",
+        content="Old Content",
+        user_id=author.user_id,
+        created_at=get_kst_now() - timedelta(days=1)
+    )
+    new_post = Post(
+        title="New Post",
+        content="New Content",
+        user_id=author.user_id,
+        created_at=get_kst_now()
+    )
+    db_session.add_all([old_post, new_post])
+    db_session.commit()
+    
+    db_session.refresh(old_post)
+    db_session.refresh(new_post)
+
+    photo2 = Photo(post_id=old_post.post_id, img_url="http://img2.com", order=1)
+    photo1 = Photo(post_id=old_post.post_id, img_url="http://img1.com", order=0)
+    db_session.add_all([photo2, photo1])
+
+    like = Like(user_id=liker.user_id, post_id=old_post.post_id)
+    db_session.add(like)
+    
+    db_session.commit()
+
+    result = await view_post(db=db_session)
+
+    assert len(result) == 2
+    assert result[0].title == "New Post"
+    assert result[1].title == "Old Post"
+    assert result[0].name == "Kim Author"
+    assert result[1].like_count == 1
+    assert result[0].like_count == 0
+    assert len(result[1].image_url) == 2
+    assert result[1].image_url[0] == "http://img1.com"
+    assert result[1].image_url[1] == "http://img2.com"
+
+@pytest.mark.asyncio
+async def test_view_post_empty(db_session: Session):
+    result = await view_post(db=db_session)
+    assert result == []

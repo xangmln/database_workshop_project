@@ -1,9 +1,15 @@
 import pytest
+from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from unittest.mock import patch
 
+
 from app.api.models.user import User
+from app.api.models.post import Post
+from app.api.models.photo import Photo
+from app.api.models.like import Like
+from app.api.utils.utils import get_kst_now
 
 test_post_data = {
     "title": "Router Test Title",
@@ -90,3 +96,55 @@ def test_create_post_user_not_found(client: TestClient, db_session: Session):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "사용자를 찾을 수 없습니다."
+
+def test_get_all_posts_success(client: TestClient, db_session: Session):
+    user = User(
+        user_id="api_view_user",
+        email="view@example.com",
+        hashed_password="pw",
+        name="View Tester"
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    post1 = Post(
+        title="Old Post",
+        content="Content 1",
+        user_id=user.user_id,
+        created_at=get_kst_now() - timedelta(days=1)
+    )
+    post2 = Post(
+        title="New Post",
+        content="Content 2",
+        user_id=user.user_id,
+        created_at=get_kst_now()
+    )
+    db_session.add_all([post1, post2])
+    db_session.commit()
+    db_session.refresh(post1)
+
+    photo = Photo(post_id=post1.post_id, img_url="http://test.com/img.jpg", order=0)
+    db_session.add(photo)
+
+    like = Like(user_id=user.user_id, post_id=post1.post_id)
+    db_session.add(like)
+    db_session.commit()
+
+    response = client.get("/post")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert len(data) == 2
+    assert data[0]["title"] == "New Post"
+    assert data[1]["title"] == "Old Post"
+    assert data[1]["name"] == "View Tester"
+    assert data[1]["like_count"] == 1
+    assert len(data[1]["image_url"]) == 1
+    assert data[1]["image_url"][0] == "http://test.com/img.jpg"
+
+def test_get_all_posts_empty(client: TestClient, db_session: Session):
+    response = client.get("/post")
+    
+    assert response.status_code == 200
+    assert response.json() == []
