@@ -3,7 +3,7 @@ from app.api.utils.deps import SessionDep
 from app.api.models.comment import Comment
 from app.api.schemas.comments import CommentIn, CommentOut, CommentBase
 
-async def create_comment(db: SessionDep, comment_in: CommentIn) -> CommentOut:
+async def create_comment(db: SessionDep, comment_in: CommentIn) -> CommentBase:
     new_comment = Comment(
         post_id=comment_in.post_id,
         user_id=comment_in.user_id,

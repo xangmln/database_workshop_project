@@ -11,7 +11,7 @@ comment = APIRouter(prefix="/comment", tags=["comment"])
 async def api_create_comment(db: SessionDep, comment_in: CommentIn = Body(...)):
     """
     댓글 생성용 API\n
-    uset_id, post_id, content body 파라미터 필요
+    user_id, post_id, content body 파라미터 필요
     """
     return await create_comment(db=db, comment_in=comment_in)
 
