@@ -2,18 +2,18 @@ from uuid import uuid4
 from typing import List
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.db import Base
+from app.core.db import Base
 
 class Tag(Base):
     __tablename__ = "tags"
 
     tag_id: Mapped[str] = mapped_column(
-        String,
+        String(36),
         primary_key=True,
         default=lambda: str(uuid4())
     )
     word: Mapped[str] = mapped_column(
-        String,
+        String(100),
         unique=True,
         index=True,
         nullable=False

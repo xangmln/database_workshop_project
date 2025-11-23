@@ -2,20 +2,20 @@ from uuid import uuid4
 from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.db import Base
-from api.utils.utils import get_kst_now
+from app.core.db import Base
+from app.api.utils.utils import get_kst_now
 
 
 class Comment(Base):
     __tablename__ = "comments"
 
     comment_id: Mapped[str] = mapped_column(
-        String,
+        String(36),
         primary_key=True,
         default=lambda: str(uuid4())
     )
     content: Mapped[str] = mapped_column(
-        String,
+        String(255),
         nullable=False
     )
     user_id: Mapped[str] = mapped_column(

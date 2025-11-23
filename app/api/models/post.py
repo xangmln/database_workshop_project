@@ -3,14 +3,14 @@ from typing import List
 from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.db import Base
-from api.utils.utils import get_kst_now
+from app.core.db import Base
+from app.api.utils.utils import get_kst_now
 
 class Post(Base):
     __tablename__ = "posts"
 
     post_id: Mapped[str] = mapped_column(
-        String, 
+        String(36), 
         primary_key=True, 
         default=lambda: str(uuid4())
     )
@@ -20,12 +20,12 @@ class Post(Base):
         index=True
     )
     title: Mapped[str] = mapped_column(
-        String, 
+        String(100), 
         index=True, 
         nullable=False
     )
     content: Mapped[str] = mapped_column(
-        String, 
+        String(100), 
         nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -46,7 +46,7 @@ class Post(Base):
         back_populates="post", 
         cascade="all, delete-orphan"
     )
-    post_tags: Mapped[List["Hashtag"]] = relationship(
+    post_hashtags: Mapped[List["Hashtag"]] = relationship(
         "Hashtag",
         back_populates="post",
         cascade="all, delete-orphan"
