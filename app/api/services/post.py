@@ -92,25 +92,14 @@ async def view_post(
         .outerjoin(Like, Post.post_id == Like.post_id)
         .options(
             joinedload(Post.author),
-            joinedload(Post.post_photos)
+            joinedload(Post.post_photos),
+            joinedload(Post.post_hashtags)
         )
         .group_by(Post.post_id)
         .order_by(Post.created_at.desc())
         .all()
     )
-    result = []
-    for p, like_count in posts:
-        photos = sorted(p.post_photos, key=lambda x: x.order)
-        image_urls = [photo.img_url for photo in photos]
-        post_view = PostView(
-            image_url=image_urls,
-            title=p.title,
-            content=p.content,
-            user_id=p.user_id,
-            name=p.author.name,
-            like_count=like_count
-        )
-        result.append(post_view)
-    return result
+    
+    return [PostView.from_orm_custom(p, like_count) for p, like_count in posts]
 
     
