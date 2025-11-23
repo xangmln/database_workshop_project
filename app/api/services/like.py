@@ -10,6 +10,12 @@ from app.api.schemas.likes import LikeBase
 from app.api.schemas.posts import PostView
 
 async def create_like(db: SessionDep, user_id: str, post_id: str) -> LikeBase:
+    like = db.query(Like).filter(
+        Like.user_id == user_id,
+        Like.post_id == post_id
+    ).first()
+    if like:
+        return LikeBase.model_validate(like)
     new_like = Like(
         user_id=user_id,
         post_id=post_id
