@@ -20,7 +20,7 @@ class PostView(PostOut):
     def from_orm_custom(cls, post, like_count: int) -> "PostView":
         sorted_photos = sorted(post.post_photos, key=lambda x: x.order)
         image_urls = [photo.img_url for photo in sorted_photos]
-        hashtags = [tag for tag in post.post_hashtags]
+        hashtags = [ht.tag for ht in post.post_hashtags if ht.tag]
 
         return cls(
             image_url=image_urls,
