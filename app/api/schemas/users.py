@@ -17,13 +17,15 @@ class UserOut(BaseModel):
     user_id: str
     email: EmailStr
     name: str
+    bio: str | None = None
+    
     
     model_config = ConfigDict(from_attributes=True)
 
 class UserProfile(BaseModel):
     user_id: str
-    name: str
     bio: str | None = None
+    name: str
     user_post : List[PostView] = []
 
     model_config = ConfigDict(from_attributes=True)

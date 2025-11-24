@@ -2,6 +2,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.security import get_password_hash
+from app.api.models.user import User
+
 test_user_payload = {
     "email": "test.signup@example.com",
     "password": "a_very_secure_password_123",
@@ -70,3 +73,46 @@ def test_login_wrong_password_fails(client: TestClient, db_session: Session):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "비밀번호가 일치하지 않습니다"
+
+@pytest.fixture(scope="function")
+def setup_user_for_pw(db_session: Session):
+    user = User(
+        user_id="pw_route_user",
+        email="pw_route@test.com",
+        hashed_password=get_password_hash("old_secret"),
+        name="Route Tester"
+    )
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+def test_change_password_endpoint_success(client: TestClient, db_session: Session, setup_user_for_pw):
+    """라우터 성공 테스트"""
+    payload = {
+        "old_password": "old_secret",
+        "new_password": "new_secret"
+    }
+    
+    response = client.patch(
+        f"/auth/{setup_user_for_pw.user_id}/password",
+        json=payload
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["user_id"] == setup_user_for_pw.user_id
+
+def test_change_password_endpoint_wrong_pw(client: TestClient, db_session: Session, setup_user_for_pw):
+    """라우터 실패 테스트: 비밀번호 틀림"""
+    payload = {
+        "old_password": "wrong_secret",
+        "new_password": "new_secret"
+    }
+    
+    response = client.patch(
+        f"/auth/{setup_user_for_pw.user_id}/password",
+        json=payload
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "기존 비밀번호가 일치하지 않습니다."

@@ -53,10 +53,61 @@ async def get_user_profile(db: SessionDep, user_id: str) -> UserProfile:
         PostView.from_orm_custom(p, like_count) 
         for p, like_count in posts_query
     ]
-    
+
     return UserProfile(
         user_id=user.user_id,
         name=user.name,
         bio=user.bio,
         user_post=user_posts
     )
+
+async def change_user_bio(db: SessionDep, user_id: str, new_bio: str) -> UserOut:
+    """
+    주어진 user_id로 사용자의 바이오를 변경하는 서비스 함수입니다.
+    """
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다."
+        )
+    user.bio = new_bio
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
+
+async def change_user_name(db: SessionDep, user_id: str, new_name: str) -> UserOut:
+    """
+    주어진 user_id로 사용자의 이름을 변경하는 서비스 함수입니다.
+    """
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다."
+        )
+    user.name = new_name
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
+
+async def change_user_email(db: SessionDep, user_id: str, new_email: str) -> UserOut:
+    """
+    주어진 user_id로 사용자의 이메일을 변경하는 서비스 함수입니다.
+    """
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다."
+        )
+    existing_user = db.query(User).filter(User.email == new_email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 등록된 이메일입니다."
+        )
+    user.email = new_email
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
