@@ -94,7 +94,7 @@ async def view_post(
         .options(
             joinedload(Post.author),
             joinedload(Post.post_photos),
-            joinedload(Post.post_hashtags)
+            joinedload(Post.post_hashtags).joinedload(Hashtag.tag)
         )
         .group_by(Post.post_id)
         .order_by(Post.created_at.desc())
