@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-from typing import List
 from app.api.utils.deps import SessionDep
 from app.api.schemas.users import UserProfile
 from app.api.services.user import get_user_profile
