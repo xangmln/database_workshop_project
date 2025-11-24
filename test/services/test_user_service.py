@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from datetime import datetime, timedelta
 
 from app.api.utils.utils import get_kst_now
-from app.api.services.user import get_user_profile
+from app.api.services.user import get_user_profile, change_user_bio, change_user_name, change_user_email
 from app.api.models.user import User
 from app.api.models.post import Post
 from app.api.models.photo import Photo
@@ -84,3 +84,81 @@ async def test_get_user_profile_not_found(db_session: Session):
     
     assert exc.value.status_code == 404
     assert exc.value.detail == "사용자를 찾을 수 없습니다."
+
+
+@pytest.mark.asyncio
+async def test_change_user_bio_success(db_session: Session):
+    user = User(
+        user_id="bio_user", 
+        email="bio@test.com", 
+        hashed_password="pw", 
+        name="Bio User", 
+        bio="Old Bio"
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    result = await change_user_bio(db_session, user.user_id, "New Bio")
+
+    assert result.bio == "New Bio"
+    
+    db_user = db_session.query(User).filter(User.user_id == user.user_id).first()
+    assert db_user.bio == "New Bio"
+
+@pytest.mark.asyncio
+async def test_change_user_bio_not_found(db_session: Session):
+    with pytest.raises(HTTPException) as exc:
+        await change_user_bio(db_session, "unknown_user", "New Bio")
+    
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "사용자를 찾을 수 없습니다."
+
+@pytest.mark.asyncio
+async def test_change_user_name_success(db_session: Session):
+    user = User(
+        user_id="name_user", 
+        email="name@test.com", 
+        hashed_password="pw", 
+        name="Old Name"
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    result = await change_user_name(db_session, user.user_id, "New Name")
+
+    assert result.name == "New Name"
+
+    db_user = db_session.query(User).filter(User.user_id == user.user_id).first()
+    assert db_user.name == "New Name"
+
+@pytest.mark.asyncio
+async def test_change_user_name_not_found(db_session: Session):
+    with pytest.raises(HTTPException) as exc:
+        await change_user_name(db_session, "unknown_user", "New Name")
+    
+    assert exc.value.status_code == 404
+
+@pytest.mark.asyncio
+async def test_change_user_email_success(db_session: Session):
+    user = User(
+        user_id="email_user", 
+        email="old@test.com", 
+        hashed_password="pw", 
+        name="Email User"
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    result = await change_user_email(db_session, user.user_id, "new@test.com")
+
+    assert result.email == "new@test.com"
+
+    db_user = db_session.query(User).filter(User.user_id == user.user_id).first()
+    assert db_user.email == "new@test.com"
+
+@pytest.mark.asyncio
+async def test_change_user_email_not_found(db_session: Session):
+    with pytest.raises(HTTPException) as exc:
+        await change_user_email(db_session, "unknown_user", "new@test.com")
+    
+    assert exc.value.status_code == 404
