@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from app.api.utils.deps import SessionDep
 from app.api.schemas.users import UserProfile, UserOut
 from app.api.services.user import get_user_profile, change_user_bio, change_user_email, change_user_name
@@ -15,7 +15,7 @@ async def get_user_profile_endpoint(db: SessionDep, user_id: str):
     return await get_user_profile(db=db, user_id=user_id)
 
 @user.patch("/{user_id}/bio", response_model=UserOut, responses={404: {"description": "사용자를 찾을 수 없습니다."}})
-async def change_user_bio_endpoint(db: SessionDep, user_id: str, new_bio: str):
+async def change_user_bio_endpoint(db: SessionDep, user_id: str, new_bio: str = Body(..., embed=True)):
     """
     특정 사용자의 바이오 변경 API\n
     user_id path 파라미터 필요\n
@@ -24,8 +24,8 @@ async def change_user_bio_endpoint(db: SessionDep, user_id: str, new_bio: str):
     """
     return await change_user_bio(db=db, user_id=user_id, new_bio=new_bio)
 
-@user.patch("/{user_id}/email", response_model=UserOut, responses={404: {"description": "사용자를 찾을 수 없습니다."}})
-async def change_user_email_endpoint(db: SessionDep, user_id: str, new_email: str):
+@user.patch("/{user_id}/email", response_model=UserOut, responses={404: {"description": "사용자를 찾을 수 없습니다."}, 409: {"description": "이미 등록된 이메일입니다."}})
+async def change_user_email_endpoint(db: SessionDep, user_id: str, new_email: str = Body(..., embed=True)):
     """
     특정 사용자의 이메일 변경 API\n
     user_id path 파라미터 필요\n
@@ -35,7 +35,7 @@ async def change_user_email_endpoint(db: SessionDep, user_id: str, new_email: st
     return await change_user_email(db=db, user_id=user_id, new_email=new_email)
 
 @user.patch("/{user_id}/name", response_model=UserOut, responses={404: {"description": "사용자를 찾을 수 없습니다."}})
-async def change_user_name_endpoint(db: SessionDep, user_id: str, new_name: str):
+async def change_user_name_endpoint(db: SessionDep, user_id: str, new_name: str = Body(..., embed=True)):
     """
     특정 사용자의 이름 변경 API\n
     user_id path 파라미터 필요\n
