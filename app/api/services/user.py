@@ -101,6 +101,12 @@ async def change_user_email(db: SessionDep, user_id: str, new_email: str) -> Use
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자를 찾을 수 없습니다."
         )
+    existing_user = db.query(User).filter(User.email == new_email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 등록된 이메일입니다."
+        )
     user.email = new_email
     db.commit()
     db.refresh(user)

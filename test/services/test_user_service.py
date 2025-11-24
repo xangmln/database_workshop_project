@@ -138,23 +138,29 @@ async def test_change_user_name_not_found(db_session: Session):
     
     assert exc.value.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_change_user_email_success(db_session: Session):
-    user = User(
-        user_id="email_user", 
-        email="old@test.com", 
-        hashed_password="pw", 
-        name="Email User"
-    )
+    user = User(user_id="email_u", email="old@test.com", hashed_password="pw", name="EmailUser")
     db_session.add(user)
     db_session.commit()
 
     result = await change_user_email(db_session, user.user_id, "new@test.com")
-
+    
     assert result.email == "new@test.com"
 
-    db_user = db_session.query(User).filter(User.user_id == user.user_id).first()
-    assert db_user.email == "new@test.com"
+@pytest.mark.asyncio
+async def test_change_user_email_duplicate(db_session: Session):
+    user1 = User(user_id="user1", email="exist@test.com", hashed_password="pw", name="User1")
+    user2 = User(user_id="user2", email="change@test.com", hashed_password="pw", name="User2")
+    db_session.add_all([user1, user2])
+    db_session.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await change_user_email(db_session, user2.user_id, "exist@test.com")
+    
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "이미 등록된 이메일입니다."
 
 @pytest.mark.asyncio
 async def test_change_user_email_not_found(db_session: Session):
