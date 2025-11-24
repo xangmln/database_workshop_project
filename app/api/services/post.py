@@ -73,6 +73,7 @@ async def create_new_post(
     db.refresh(new_post)
 
     result = PostOut(
+        post_id = new_post.post_id,
         image_url = uploaded_urls,
         title = new_post.title,
         content = new_post.content,

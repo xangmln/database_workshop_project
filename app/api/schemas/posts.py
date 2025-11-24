@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.api.schemas.tags import TagOut
 
 class PostOut(BaseModel):
+    post_id: str
     image_url: List[str]
     title: str
     content: str
@@ -23,6 +24,7 @@ class PostView(PostOut):
         hashtags = [ht.tag for ht in post.post_hashtags if ht.tag]
 
         return cls(
+            post_id=post.post_id,
             image_url=image_urls,
             title=post.title,
             content=post.content,
