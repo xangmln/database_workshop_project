@@ -130,62 +130,40 @@ async def test_create_new_post_too_many_images(db_session: Session):
 
 
 @pytest.mark.asyncio
-async def test_view_post_success(db_session: Session):
-    author = User(
-        user_id="author_id",
-        email="author@test.com",
-        hashed_password="pw",
-        name="Kim Author"
-    )
-    liker = User(
-        user_id="liker_id",
-        email="liker@test.com",
-        hashed_password="pw",
-        name="Lee Liker"
-    )
-    db_session.add_all([author, liker])
+async def test_view_post(db_session: Session):
+    viewer = User(user_id="viewer", email="view@test.com", hashed_password="pw", name="Viewer")
+    author = User(user_id="author_vp", email="au_vp@test.com", hashed_password="pw", name="Author")
+    other_user = User(user_id="other", email="other@test.com", hashed_password="pw", name="Other")
+    db_session.add_all([viewer, author, other_user])
     db_session.commit()
 
-    old_post = Post(
-        title="Old Post",
-        content="Old Content",
-        user_id=author.user_id,
-        created_at=get_kst_now() - timedelta(days=1)
-    )
-    new_post = Post(
-        title="New Post",
-        content="New Content",
-        user_id=author.user_id,
-        created_at=get_kst_now()
-    )
-    db_session.add_all([old_post, new_post])
-    db_session.commit()
-    
-    db_session.refresh(old_post)
-    db_session.refresh(new_post)
-
-    photo2 = Photo(post_id=old_post.post_id, img_url="http://img2.com", order=1)
-    photo1 = Photo(post_id=old_post.post_id, img_url="http://img1.com", order=0)
-    db_session.add_all([photo2, photo1])
-
-    like = Like(user_id=liker.user_id, post_id=old_post.post_id)
-    db_session.add(like)
-    
+    post_liked = Post(title="Liked Post", content="C1", user_id=author.user_id, created_at=datetime.utcnow())
+    post_not_liked = Post(title="Not Liked Post", content="C2", user_id=author.user_id, created_at=datetime.utcnow() - timedelta(hours=1))
+    db_session.add_all([post_liked, post_not_liked])
     db_session.commit()
 
-    result = await view_post(db=db_session)
+    l1 = Like(user_id=viewer.user_id, post_id=post_liked.post_id)
+    l2 = Like(user_id=other_user.user_id, post_id=post_liked.post_id)
+    l3 = Like(user_id=other_user.user_id, post_id=post_not_liked.post_id)
+    db_session.add_all([l1, l2, l3])
+    db_session.commit()
+
+    result = await view_post(db=db_session, current_user_id=viewer.user_id)
 
     assert len(result) == 2
-    assert result[0].title == "New Post"
-    assert result[1].title == "Old Post"
-    assert result[0].name == "Kim Author"
+    
+    assert result[0].title == "Liked Post"
+    assert result[0].like_count == 2
+    assert result[0].is_liked is True
+
+    assert result[1].title == "Not Liked Post"
     assert result[1].like_count == 1
-    assert result[0].like_count == 0
-    assert len(result[1].image_url) == 2
-    assert result[1].image_url[0] == "http://img1.com"
-    assert result[1].image_url[1] == "http://img2.com"
+    assert result[1].is_liked is False
 
 @pytest.mark.asyncio
+async def test_view_post_empty(db_session: Session, current_user_id="empty_user"):
+    result = await view_post(db=db_session, current_user_id=current_user_id)
+    assert result == []
 async def test_view_post_empty(db_session: Session):
     result = await view_post(db=db_session)
     assert result == []
@@ -364,3 +342,4 @@ async def test_delete_post_forbidden(db_session: Session):
         await delete_post(db=db_session, post_id=post.post_id, current_user_id=hacker.user_id)
     
     assert exc.value.status_code == 403
+

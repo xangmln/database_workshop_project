@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import joinedload
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from app.api.utils.deps import SessionDep
 from app.api.models.user import User
@@ -36,7 +36,13 @@ async def get_user_profile(db: SessionDep, user_id: str) -> UserProfile:
     posts_query = (
         db.query(
             Post,
-            func.count(Like.user_id).label('like_count')
+            func.count(Like.user_id).label('like_count'),
+            func.max(
+                case(
+                    (Like.user_id == user_id, 1), 
+                    else_=0
+                )
+            ).label('is_liked_by_me')
         )
         .outerjoin(Like, Post.post_id == Like.post_id)
         .filter(Post.user_id == user_id)
@@ -50,8 +56,8 @@ async def get_user_profile(db: SessionDep, user_id: str) -> UserProfile:
         .all()
     )
     user_posts = [
-        PostView.from_orm_custom(p, like_count) 
-        for p, like_count in posts_query
+        PostView.from_orm_custom(p, like_count, bool(is_liked_val)) 
+        for p, like_count, is_liked_val in posts_query
     ]
 
     return UserProfile(
