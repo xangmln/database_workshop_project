@@ -7,12 +7,13 @@ from app.api.schemas.posts import PostOut, PostView
 
 post = APIRouter(prefix="/post", tags=["post"])
 
-@post.get("", response_model=List[PostView])
-async def get_all_posts(db: SessionDep):
+@post.get("/{current_user_id}", response_model=List[PostView])
+async def get_all_posts(db: SessionDep, current_user_id: str):
     """
-    전체 게시글 조회 API
+    전체 게시글 조회 API\n
+    current_user_id에 현재 유저 담기
     """
-    posts = await view_post(db=db)
+    posts = await view_post(db=db, current_user_id=current_user_id)
 
     return [PostView.model_validate(post) for post in posts]
 

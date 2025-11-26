@@ -97,54 +97,52 @@ def test_create_post_user_not_found(client: TestClient, db_session: Session):
     assert response.status_code == 404
     assert response.json()["detail"] == "사용자를 찾을 수 없습니다."
 
-def test_get_all_posts_success(client: TestClient, db_session: Session):
-    user = User(
-        user_id="api_view_user",
-        email="view@example.com",
-        hashed_password="pw",
-        name="View Tester"
-    )
-    db_session.add(user)
+def test_get_all_posts_with_like_status(client: TestClient, db_session: Session):
+    viewer = User(user_id="viewer", email="view@ex.com", hashed_password="pw", name="Viewer")
+    author = User(user_id="author", email="auth@ex.com", hashed_password="pw", name="Author")
+    db_session.add_all([viewer, author])
     db_session.commit()
 
-    post1 = Post(
-        title="Old Post",
+    post_liked = Post(
+        title="Liked Post",
         content="Content 1",
-        user_id=user.user_id,
-        created_at=get_kst_now() - timedelta(days=1)
-    )
-    post2 = Post(
-        title="New Post",
-        content="Content 2",
-        user_id=user.user_id,
+        user_id=author.user_id,
         created_at=get_kst_now()
     )
-    db_session.add_all([post1, post2])
+    post_not_liked = Post(
+        title="Not Liked Post",
+        content="Content 2",
+        user_id=author.user_id,
+        created_at=get_kst_now() - timedelta(hours=1)
+    )
+    db_session.add_all([post_liked, post_not_liked])
     db_session.commit()
-    db_session.refresh(post1)
+    db_session.refresh(post_liked)
 
-    photo = Photo(post_id=post1.post_id, img_url="http://test.com/img.jpg", order=0)
+    photo = Photo(post_id=post_liked.post_id, img_url="http://img.com", order=0)
     db_session.add(photo)
 
-    like = Like(user_id=user.user_id, post_id=post1.post_id)
+    like = Like(user_id=viewer.user_id, post_id=post_liked.post_id)
     db_session.add(like)
     db_session.commit()
 
-    response = client.get("/post")
+    response = client.get(f"/post/{viewer.user_id}")
 
     assert response.status_code == 200
     data = response.json()
 
     assert len(data) == 2
-    assert data[0]["title"] == "New Post"
-    assert data[1]["title"] == "Old Post"
-    assert data[1]["name"] == "View Tester"
-    assert data[1]["like_count"] == 1
-    assert len(data[1]["image_url"]) == 1
-    assert data[1]["image_url"][0] == "http://test.com/img.jpg"
+    
+    assert data[0]["title"] == "Liked Post"
+    assert data[0]["is_liked"] is True
+    assert data[0]["like_count"] == 1
+    
+    assert data[1]["title"] == "Not Liked Post"
+    assert data[1]["is_liked"] is False
+    assert data[1]["like_count"] == 0
 
 def test_get_all_posts_empty(client: TestClient, db_session: Session):
-    response = client.get("/post")
+    response = client.get("/post/any_user_id")
     
     assert response.status_code == 200
     assert response.json() == []

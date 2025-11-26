@@ -1,6 +1,6 @@
 from typing import List
 from sqlalchemy.orm import joinedload
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from app.api.utils.deps import SessionDep
 from app.api.models.tag import Tag
@@ -20,11 +20,17 @@ async def get_tag_by_word(db: SessionDep, word: str) -> TagOut:
         db.flush()
         return TagOut.model_validate(new_tag)
     
-async def get_posts_by_tag(db: SessionDep, tag_word: str) -> List[PostView]|None:
+async def get_posts_by_tag(db: SessionDep, tag_word: str, current_user_id: str) -> List[PostView]|None:
     posts = (
         db.query(
             Post,
-            func.count(Like.user_id).label('like_count')
+            func.count(Like.user_id).label('like_count'),
+            func.max(
+                case(
+                    (Like.user_id == current_user_id, 1), 
+                    else_=0
+                )
+            ).label('is_liked_by_me')
         )
         .join(Hashtag, Post.post_id == Hashtag.post_id)
         .join(Tag, Hashtag.tag_id == Tag.tag_id)
@@ -42,4 +48,4 @@ async def get_posts_by_tag(db: SessionDep, tag_word: str) -> List[PostView]|None
     if not posts:
         return None
         
-    return [PostView.from_orm_custom(p, like_count) for p, like_count in posts]
+    return [PostView.from_orm_custom(p, like_count, bool(is_liked_val)) for p, like_count, is_liked_val in posts]

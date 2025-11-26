@@ -1,7 +1,7 @@
 from fastapi import UploadFile, HTTPException, status
 from typing import List
 from sqlalchemy.orm import joinedload
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 
 from app.api.models.post import Post
@@ -83,12 +83,19 @@ async def create_new_post(
     return result
 
 async def view_post(
-    db: SessionDep
+    db: SessionDep,
+    current_user_id: str
 ) -> List[PostView]:
     posts = (
         db.query(
             Post,
-            func.count(Like.user_id).label('like_count')
+            func.count(Like.user_id).label('like_count'),
+            func.max(
+                case(
+                    (Like.user_id == current_user_id, 1), 
+                    else_=0
+                )
+            ).label('is_liked_by_me')
         )
         .outerjoin(Like, Post.post_id == Like.post_id)
         .options(
@@ -101,6 +108,5 @@ async def view_post(
         .all()
     )
     
-    return [PostView.from_orm_custom(p, like_count) for p, like_count in posts]
-
+    return [PostView.from_orm_custom(p, like_count, bool(is_liked_val)) for p, like_count, is_liked_val in posts]
     
