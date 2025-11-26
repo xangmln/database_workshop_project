@@ -12,39 +12,37 @@ from app.api.models.like import Like
 
 @pytest.mark.asyncio
 async def test_get_posts_by_tag_success(db_session: Session):
-    """성공 케이스: 태그로 게시글 조회 및 좋아요 수 확인"""
-    user = User(user_id="tag_srv_user", email="tag_srv@test.com", hashed_password="pw", name="Tagger")
-    liker = User(user_id="liker_user", email="liker@test.com", hashed_password="pw", name="Liker")
-    db_session.add_all([user, liker])
+    viewer = User(user_id="viewer", email="view@test.com", hashed_password="pw", name="Viewer")
+    author = User(user_id="author", email="auth@test.com", hashed_password="pw", name="Author")
+    db_session.add_all([viewer, author])
     db_session.commit()
 
     tag = Tag(word="fastapi")
     db_session.add(tag)
     db_session.commit()
 
-    post = Post(title="Tag Post", content="Content", user_id=user.user_id, created_at=get_kst_now())
+    post = Post(title="Tag Post", content="Content", user_id=author.user_id, created_at=get_kst_now())
     db_session.add(post)
     db_session.commit()
 
     hashtag = Hashtag(post_id=post.post_id, tag_id=tag.tag_id)
-    like = Like(user_id=liker.user_id, post_id=post.post_id)
+    like = Like(user_id=viewer.user_id, post_id=post.post_id)
     db_session.add_all([hashtag, like])
     db_session.commit()
 
-    result = await get_posts_by_tag(db=db_session, tag_word="fastapi")
+    result = await get_posts_by_tag(db=db_session, tag_word="fastapi", current_user_id=viewer.user_id)
 
     assert result is not None
     assert len(result) == 1
     assert result[0].title == "Tag Post"
     assert result[0].like_count == 1
+    assert result[0].is_liked is True
     
     tags = [t.word for t in result[0].hashtag]
     assert "fastapi" in tags
 
 @pytest.mark.asyncio
 async def test_get_posts_by_tag_not_found(db_session: Session):
-    """실패 케이스: 해당 태그의 게시글이 없을 때 None 반환"""
-    
-    result = await get_posts_by_tag(db=db_session, tag_word="nonexistent")
+    result = await get_posts_by_tag(db=db_session, tag_word="nonexistent", current_user_id="any_user")
 
     assert result is None
