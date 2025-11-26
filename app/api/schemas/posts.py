@@ -33,3 +33,10 @@ class PostView(PostOut):
             name=post.author.name,
             like_count=like_count
         )
+    
+class PostEdit(BaseModel):
+    post_id : str
+    current_user_id : str
+    title : str
+    content : str
+    hashtag : Optional[List[str]]

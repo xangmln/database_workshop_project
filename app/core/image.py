@@ -41,3 +41,22 @@ def upload_img_to_cloudinary(file: UploadFile) -> str:
     except Exception as e:
         logger.error(f"Cloudinary 업로드 실패: {e}")
         raise HTTPException(status_code=500, detail="이미지 업로드에 실패했습니다.") from e
+    
+def delete_img_from_cloudinary(image_url: str) -> None:
+    """
+    이미지 URL을 받아 Cloudinary에서 해당 파일을 삭제합니다.
+    """
+    try:
+        parts = image_url.split("/")
+        filename_with_ext = parts[-1]
+        
+        filename = filename_with_ext.split(".")[0]
+        folder = parts[-2]
+        
+        public_id = f"{folder}/{filename}"
+        
+        cloudinary.uploader.destroy(public_id)
+        print(f"Deleted image: {public_id}")
+        
+    except Exception as e:
+        print(f"Error deleting image from Cloudinary: {e}")

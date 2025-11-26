@@ -9,6 +9,8 @@ from app.api.models.user import User
 from app.api.models.post import Post
 from app.api.models.photo import Photo
 from app.api.models.like import Like
+from app.api.models.hashtag import Hashtag
+from app.api.models.tag import Tag
 from app.api.utils.utils import get_kst_now
 
 test_post_data = {
@@ -148,3 +150,152 @@ def test_get_all_posts_empty(client: TestClient, db_session: Session):
     
     assert response.status_code == 200
     assert response.json() == []
+
+@pytest.fixture(scope="function")
+def setup_data_for_edit(db_session: Session):
+    user = User(
+        user_id="edit_tester",
+        email="edit@test.com",
+        hashed_password="pw",
+        name="Edit Tester"
+    )
+    db_session.add(user)
+    
+    other_user = User(
+        user_id="other_user",
+        email="other@test.com",
+        hashed_password="pw",
+        name="Other"
+    )
+    db_session.add(other_user)
+    db_session.commit()
+
+    tag = Tag(word="old_tag")
+    db_session.add(tag)
+    db_session.commit()
+
+    post = Post(
+        title="Original Title",
+        content="Original Content",
+        user_id=user.user_id,
+        created_at=datetime.utcnow()
+    )
+    db_session.add(post)
+    db_session.commit()
+    db_session.refresh(post)
+
+    photo = Photo(post_id=post.post_id, img_url="http://old.com/img.jpg", order=0)
+    db_session.add(photo)
+
+    ht = Hashtag(post_id=post.post_id, tag_id=tag.tag_id)
+    db_session.add(ht)
+    
+    db_session.commit()
+
+    return {"user": user, "other_user": other_user, "post": post}
+
+def test_edit_post_endpoint_success(client: TestClient, db_session: Session, setup_data_for_edit):
+    post = setup_data_for_edit["post"]
+    user = setup_data_for_edit["user"]
+
+    update_data = {
+        "post_id": post.post_id,
+        "title": "Updated Title",
+        "content": "Updated Content",
+        "current_user_id": user.user_id,
+        "hashtag": ["new_tag", "python"]
+    }
+
+    files = [
+        ("images", ("new.jpg", b"new_content", "image/jpeg"))
+    ]
+
+    with patch("app.api.services.post.upload_img_to_cloudinary") as mock_upload, \
+        patch("app.api.services.post.delete_img_from_cloudinary") as mock_delete:
+        
+        mock_upload.return_value = "http://new.com/img.jpg"
+
+        response = client.put(
+            "/post", 
+            data=update_data, 
+            files=files
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "Updated Title"
+        assert data["content"] == "Updated Content"
+        assert len(data["image_url"]) == 1
+        assert data["image_url"][0] == "http://new.com/img.jpg"
+        
+        res_tags = [t["word"] for t in data["hashtag"]]
+        assert "new_tag" in res_tags
+        assert "python" in res_tags
+
+        mock_delete.assert_called_once_with("http://old.com/img.jpg")
+
+def test_edit_post_endpoint_forbidden(client: TestClient, db_session: Session, setup_data_for_edit):
+    post = setup_data_for_edit["post"]
+    other_user = setup_data_for_edit["other_user"]
+
+    update_data = {
+        "post_id": post.post_id,
+        "title": "Hacked",
+        "content": "Hacked",
+        "current_user_id": other_user.user_id,
+        "hashtag": []
+    }
+    files = [("images", ("test.jpg", b"data", "image/jpeg"))]
+
+    response = client.put(
+        "/post",
+        data=update_data,
+        files=files
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "수정 권한이 없습니다."
+
+def test_delete_post_endpoint_success(client: TestClient, db_session: Session, setup_data_for_edit):
+    post = setup_data_for_edit["post"]
+    user = setup_data_for_edit["user"]
+
+    payload = {
+        "post_id": post.post_id,
+        "current_user_id": user.user_id
+    }
+
+    with patch("app.api.services.post.delete_img_from_cloudinary") as mock_delete:
+        response = client.request("DELETE", "/post", json=payload)
+
+        assert response.status_code == 204
+        
+        mock_delete.assert_called_once_with("http://old.com/img.jpg")
+
+    deleted_post = db_session.query(Post).filter(Post.post_id == post.post_id).first()
+    assert deleted_post is None
+
+def test_delete_post_endpoint_not_found(client: TestClient, db_session: Session):
+    payload = {
+        "post_id": "nonexistent_id",
+        "current_user_id": "user"
+    }
+
+    response = client.request("DELETE", "/post", json=payload)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "조건에 해당하는 게시물을 찾지 못했습니다."
+
+def test_delete_post_endpoint_forbidden(client: TestClient, db_session: Session, setup_data_for_edit):
+    post = setup_data_for_edit["post"]
+    other_user = setup_data_for_edit["other_user"]
+
+    payload = {
+        "post_id": post.post_id,
+        "current_user_id": other_user.user_id
+    }
+
+    response = client.request("DELETE", "/post", json=payload)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "해당 유저는 권한이 없습니다"
