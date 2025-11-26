@@ -164,12 +164,6 @@ async def test_view_post(db_session: Session):
 async def test_view_post_empty(db_session: Session, current_user_id="empty_user"):
     result = await view_post(db=db_session, current_user_id=current_user_id)
     assert result == []
-async def test_view_post_empty(db_session: Session):
-    result = await view_post(db=db_session)
-    assert result == []
-
-def create_dummy_file(filename="test.jpg"):
-    return UploadFile(filename=filename, file=BytesIO(b"fake_image_content"))
 
 @pytest.mark.asyncio
 async def test_edit_post_success(db_session: Session):
