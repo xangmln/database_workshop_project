@@ -1,18 +1,19 @@
 from typing import List
-from fastapi import APIRouter, status, File, UploadFile, Form
+from fastapi import APIRouter, status, File, UploadFile, Form, Body
 
 from app.api.utils.deps import SessionDep
-from app.api.services.post import create_new_post, view_post
-from app.api.schemas.posts import PostOut, PostView
+from app.api.services.post import create_new_post, view_post, edit_post, delete_post
+from app.api.schemas.posts import PostOut, PostView, PostEdit
 
 post = APIRouter(prefix="/post", tags=["post"])
 
-@post.get("", response_model=List[PostView])
-async def get_all_posts(db: SessionDep):
+@post.get("/{current_user_id}", response_model=List[PostView])
+async def get_all_posts(db: SessionDep, current_user_id: str):
     """
-    전체 게시글 조회 API
+    전체 게시글 조회 API\n
+    current_user_id에 현재 유저 담기
     """
-    posts = await view_post(db=db)
+    posts = await view_post(db=db, current_user_id=current_user_id)
 
     return [PostView.model_validate(post) for post in posts]
 
@@ -42,3 +43,32 @@ async def create_post_endpoint(
     )
 
     return result
+
+@post.put("",status_code=status.HTTP_200_OK,response_model=PostOut, responses={400:{"description":"이미지 수가 맞지 않을 때"}, 403:{"description":"유저가 삭제할 권한이 없을 때"}, 404:{"description":"해당 게시물이 없을때"}})
+async def edit_post_endpoint(
+    db:SessionDep, 
+    post_id: str = Form(...),
+    title: str = Form(...),
+    content: str = Form(...),
+    current_user_id: str = Form(...),
+    hashtag: List[str] = Form([]), 
+    images: List[UploadFile] = File(...)
+):
+    """
+    이거 수정하는거만 보내는게 아니라 바뀌고 난 후의 데이터를 다 보내면 됩니다.
+    """
+    post_edit = PostEdit(
+        post_id=post_id,
+        title=title,
+        content=content,
+        current_user_id=current_user_id,
+        hashtag=hashtag
+    )
+    return await edit_post(db, post_edit, images)
+
+@post.delete("",status_code=status.HTTP_204_NO_CONTENT, responses={403:{"description":"유저가 삭제할 권한이 없을 때"}, 404:{"description":"해당 게시물이 없을때"}})
+async def delete_post_endpoint(db:SessionDep, post_id : str = Body(...), current_user_id : str = Body(...)):
+    """
+    body에 담아서 보내주면 됩니다.
+    """
+    return await delete_post(db, post_id, current_user_id)

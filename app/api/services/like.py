@@ -41,7 +41,8 @@ async def get_user_liked_post(db: SessionDep, user_id: str) -> List[PostView]:
     posts = (
         db.query(
             Post,
-            func.count(Like.user_id).label('like_count')
+            func.count(Like.user_id).label('like_count'),
+            
         )
         .outerjoin(Like, Post.post_id == Like.post_id)
         .join(MyLike, Post.post_id == MyLike.post_id)
@@ -56,4 +57,4 @@ async def get_user_liked_post(db: SessionDep, user_id: str) -> List[PostView]:
         .all()
     )
 
-    return[PostView.from_orm_custom(p, like_count) for p, like_count in posts]
+    return[PostView.from_orm_custom(p, like_count, True) for p, like_count in posts]

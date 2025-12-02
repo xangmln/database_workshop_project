@@ -44,3 +44,22 @@ async def handle_login(db: SessionDep, user_in: UserIn) -> UserOut:
         )
     logger.info(f"User logged in: {user.email}")
     return UserOut.model_validate(user)
+
+async def change_password(db: SessionDep, user_id: str, old_password: str, new_password: str) -> UserOut:
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        logger.warning(f"Password change failed. User not found: {user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다."
+        )
+    if not verify_password(old_password, user.hashed_password):
+        logger.warning(f"Password change failed. Incorrect old password for user: {user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="기존 비밀번호가 일치하지 않습니다."
+        )
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
